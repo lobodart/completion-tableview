@@ -35,10 +35,11 @@ class CompletionTableView : UITableView, UITableViewDataSource
         let customFrame = CGRectMake(self.relatedTextField.frame.origin.x, self.relatedTextField.frame.origin.y + self.relatedTextField.frame.height, self.relatedTextField.frame.width, 0)
         super.init(frame: customFrame, style: UITableViewStyle.Plain)
         self.registerNib(UINib(nibName: tableCellNibName, bundle: nil), forCellReuseIdentifier: tableCellIdentifier)
-        var tmpCell : CompletionTableViewCell = self.dequeueReusableCellWithIdentifier(self.tableCellIdentifier) as CompletionTableViewCell
+        var tmpCell : UITableViewCell = self.dequeueReusableCellWithIdentifier(self.tableCellIdentifier) as UITableViewCell
         if tmpCell == nil {
             fatalError("No such object exists in the reusable-cell queue")
         }
+        println(tmpCell.frame.height)
         self.rowHeight = tmpCell.frame.height
         self.separatorStyle = UITableViewCellSeparatorStyle.None
         self.layer.cornerRadius = 5.0
