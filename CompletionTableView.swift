@@ -1,6 +1,6 @@
 //
 //  CompletionTableView.swift
-//  Eagolf
+//  completion-tableview
 //
 //  Created by Louis BODART on 04/08/2014.
 //  Copyright (c) 2014 Louis BODART. All rights reserved.
@@ -11,21 +11,37 @@ import UIKit
 
 class CompletionTableView : UITableView, UITableViewDataSource
 {
-    let relatedTextField : UITextField
-    let searchInArray : [String]
+    let relatedTextField : UITextField!
+    let searchInArray : [String]!
+    let tableCellIdentifier : String!
     
     var maxResultsToShow : Int = 0
+    var maxSelectedElements : Int = 0
     var resultsArray : [String] = []
     var selectedElements : [String] = []
     var completionsRegex : [String] = ["^#@"]
+    var completionCellForRowAtIndexPath : ((tableView: UITableView!, indexPath: NSIndexPath!) -> UITableViewCell!)? = nil
     
-    init(relatedTextField: UITextField, searchInArray: [String])
+    required init(coder aDecoder: NSCoder!)
+    {
+        super.init(coder: aDecoder)
+    }
+    
+    init(relatedTextField: UITextField, searchInArray: [String], tableCellNibName: String!, tableCellIdentifier: String!)
     {
         self.relatedTextField = relatedTextField
         self.searchInArray = searchInArray
+        self.tableCellIdentifier = tableCellIdentifier
         let customFrame = CGRectMake(self.relatedTextField.frame.origin.x, self.relatedTextField.frame.origin.y + self.relatedTextField.frame.height, self.relatedTextField.frame.width, 0)
         super.init(frame: customFrame, style: UITableViewStyle.Plain)
-        self.hidden = true
+        self.registerNib(UINib(nibName: tableCellNibName, bundle: nil), forCellReuseIdentifier: tableCellIdentifier)
+        var tmpCell : CompletionTableViewCell = self.dequeueReusableCellWithIdentifier(self.tableCellIdentifier) as CompletionTableViewCell
+        if tmpCell == nil {
+            fatalError("No such object exists in the reusable-cell queue")
+        }
+        self.rowHeight = tmpCell.frame.height
+        self.separatorStyle = UITableViewCellSeparatorStyle.None
+        self.layer.cornerRadius = 5.0
         self.dataSource = self
     }
     
@@ -60,23 +76,29 @@ class CompletionTableView : UITableView, UITableViewDataSource
         }
         
         self.reloadData()
-        self.hidden = false
         
         self.show(animated)
     }
     
-    func selectElement(element: String)
+    func selectElement(element: String, maxSelectedElementsReached: (() -> Void)?) -> Bool
     {
-        let tmpArray = self.selectedElements.bridgeToObjectiveC()
+        let tmpArray = NSArray(array: self.selectedElements)
         if tmpArray.indexOfObject(element) != NSNotFound {
-            return
+            return true
+        }
+        if self.selectedElements.count >= self.maxSelectedElements && self.maxSelectedElements != 0 {
+            if maxSelectedElementsReached != nil {
+                maxSelectedElementsReached!()
+            }
+            return false
         }
         self.selectedElements.append(element)
+        return true
     }
     
     func deselectElement(element: String)
     {
-        let tmpArray = self.selectedElements.bridgeToObjectiveC()
+        let tmpArray = NSArray(array: self.selectedElements)
         let indexToRemove = tmpArray.indexOfObject(element)
         if indexToRemove == NSNotFound {
             return
@@ -91,9 +113,13 @@ class CompletionTableView : UITableView, UITableViewDataSource
     
     func tableView(tableView: UITableView!, cellForRowAtIndexPath indexPath: NSIndexPath!) -> UITableViewCell!
     {
-        var cell : UITableViewCell = UITableViewCell()
-        cell.textLabel.text = self.resultsArray[indexPath.row] as String
-        return cell
+        if self.completionCellForRowAtIndexPath == nil {
+            var cell : UITableViewCell = UITableViewCell(style: UITableViewCellStyle.Default, reuseIdentifier: "Identifier")
+            
+            cell.textLabel.text = self.resultsArray[indexPath.row] as String
+            return cell
+        }
+        return self.completionCellForRowAtIndexPath!(tableView: tableView, indexPath: indexPath)
     }
     
     func show(animated: Bool)
@@ -118,14 +144,11 @@ class CompletionTableView : UITableView, UITableViewDataSource
         
         if !animated {
             self.frame = finalRect
-            self.hidden = true
             return
         }
         
         UIView.animateWithDuration(0.25, animations: {() -> Void in
             self.frame = finalRect
-        }, completion: {(finished : Bool) -> Void in
-            self.hidden = true
         })
     }
 }
